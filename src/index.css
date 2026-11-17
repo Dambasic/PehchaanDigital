@@ -1,0 +1,39 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+
+  body {
+    background-color: #F7F9FC;
+    color: #061B3A;
+    overflow-x: hidden;
+  }
+}
+
+/* Details & Summary accordion transition styling adhering to modern web guidance */
+details > summary {
+  list-style: none;
+}
+details > summary::-webkit-details-marker {
+  display: none;
+}
+
+details[open] summary .accordion-chevron {
+  transform: rotate(180deg);
+}
+
+/* Subtle smooth transitions */
+.transition-smooth {
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Clean text selection */
+::selection {
+  background-color: #FF8A00;
+  color: #FFFFFF;
+}
