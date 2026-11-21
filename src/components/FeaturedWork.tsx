@@ -11,6 +11,7 @@ import {
   MessageCircle
 } from 'lucide-react';
 import { getWhatsAppUrl, WHATSAPP_MESSAGES } from '../utils/whatsapp';
+import { trackWhatsAppClick } from '../utils/analytics';
 
 export const FeaturedWork: React.FC = () => {
   return (
@@ -287,6 +288,7 @@ export const FeaturedWork: React.FC = () => {
                 href={getWhatsAppUrl(WHATSAPP_MESSAGES.TALK_TO_TEAM)}
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={() => trackWhatsAppClick('Featured Work Portfolio WhatsApp')}
                 className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-brand-orange hover:bg-orange-600 text-white font-bold text-sm tracking-wide transition-all shadow-md active:scale-95"
               >
                 <MessageCircle className="w-4 h-4" />

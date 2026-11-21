@@ -17,21 +17,24 @@ import {
   buildContactEnquiryMessage,
   ContactFormData
 } from '../utils/whatsapp';
-import { SERVICES } from '../data/services';
-
-const SERVICE_OPTIONS = [
-  ...SERVICES.map((s) => `${s.name} (${s.launchPrice})`),
-  'Custom Digital Package',
-  'General Enquiry / Multiple Services'
-];
+import { useServices } from '../utils/servicesStore';
+import { trackWhatsAppClick, trackConversion } from '../utils/analytics';
 
 export const ContactSection: React.FC = () => {
+  const [services] = useServices();
+
+  const serviceOptions = [
+    ...services.map((s) => `${s.name} (${s.launchPrice})`),
+    'Custom Digital Package',
+    'General Enquiry / Multiple Services'
+  ];
+
   const [formData, setFormData] = useState<ContactFormData>({
     fullName: '',
     businessName: '',
     phone: '',
     email: '',
-    service: SERVICE_OPTIONS[0],
+    service: serviceOptions[0] || 'Custom Digital Package',
     requirement: ''
   });
 
@@ -65,6 +68,10 @@ export const ContactSection: React.FC = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!validate()) return;
+
+    // Track analytics conversion & WhatsApp click
+    trackConversion('Contact Form', formData.service);
+    trackWhatsAppClick('Contact Form WhatsApp', formData.service);
 
     const message = buildContactEnquiryMessage(formData);
     const whatsappUrl = getWhatsAppUrl(message);
@@ -169,6 +176,7 @@ export const ContactSection: React.FC = () => {
                       href={`https://wa.me/${PRIMARY_WHATSAPP_NUMBER}`}
                       target="_blank"
                       rel="noopener noreferrer"
+                      onClick={() => trackWhatsAppClick('Contact Section Direct Phone/WhatsApp')}
                       className="text-base font-bold text-white hover:text-brand-orange transition-colors mt-0.5 inline-block"
                     >
                       {PRIMARY_PHONE}
@@ -392,7 +400,7 @@ export const ContactSection: React.FC = () => {
                   onChange={handleChange}
                   className="w-full px-4 py-3 rounded-xl border border-brand-grey bg-white text-brand-navy-deep text-sm transition-all focus:outline-none focus:border-brand-navy focus:ring-2 focus:ring-brand-orange/40"
                 >
-                  {SERVICE_OPTIONS.map((opt, i) => (
+                  {serviceOptions.map((opt, i) => (
                     <option key={i} value={opt}>
                       {opt}
                     </option>

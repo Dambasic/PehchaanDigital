@@ -47,6 +47,34 @@ Follow the interactive prompts (use defaults), and it will deploy instantly.
 
 ---
 
+## 🔐 Admin Portal & Deep Analytics
+
+The website includes a built-in, secure Admin Portal with real-time product price management and deep visitor analytics:
+
+### Accessing Admin:
+- Navigate to `/#admin` in the URL (e.g. `your-domain.com/#admin`) or click **"Admin Portal"** in the footer / navbar.
+- **Default Admin Passcode:** `pehchaan2026` (can be changed anytime in Settings).
+
+### Features:
+1. **Products & Services Manager**:
+   - Change any product's launch price and original strikethrough price instantly.
+   - Edit full product details: name, description, deliverables bullets, categories/icons, badges, and button CTAs.
+   - Add new products / services or delete existing ones.
+   - Automatic WhatsApp enquiry message generator matching the new price.
+   - Instant live synchronization with the public website catalogue.
+2. **Deep Website Analytics**:
+   - **Unique Visitors & Total Visits** telemetry.
+   - **WhatsApp Clicks Breakdown** by touchpoint (Hero, Floating button, Services cards, Contact form, Navbar, Footer).
+   - **Country Analytics**: Tracks visits & WhatsApp clicks by country (India, UAE, USA, UK, Singapore, Canada, etc.) with flags and click conversion rates.
+   - **Device Breakdown**: Mobile vs Desktop vs Tablet ratio.
+   - **Real-Time Event Stream**: Live feed of visitor interactions and WhatsApp inquiries.
+   - **Time Filters**: Filter metrics by Today, 7 Days, 30 Days, or All Time.
+   - Export reports as JSON / CSV.
+3. **Vercel Analytics Integration**:
+   - Integrated `@vercel/analytics` component for serverless real-user telemetry on Vercel deployments.
+
+---
+
 ## 🛠️ Local Development
 
 ```bash

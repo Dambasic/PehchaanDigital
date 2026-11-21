@@ -1,6 +1,7 @@
 import React from 'react';
 import { ArrowRight, MessageCircle, CheckCircle2, Sparkles, Globe, TrendingUp, Smartphone } from 'lucide-react';
 import { getWhatsAppUrl, COMMON_MESSAGES } from '../utils/whatsapp';
+import { trackWhatsAppClick } from '../utils/analytics';
 
 export const Hero: React.FC = () => {
   return (
@@ -73,6 +74,7 @@ export const Hero: React.FC = () => {
                 href={getWhatsAppUrl(COMMON_MESSAGES.heroTalk)}
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={() => trackWhatsAppClick('Hero WhatsApp CTA')}
                 className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 bg-white hover:bg-brand-orange-light text-brand-navy-deep border-2 border-brand-orange font-bold px-7 py-3.5 rounded-full shadow-sm hover:shadow-md transition-all duration-200 active:scale-95 group"
               >
                 <MessageCircle className="w-5 h-5 text-brand-orange group-hover:scale-110 transition-transform" />

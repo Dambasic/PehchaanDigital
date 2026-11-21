@@ -1,6 +1,7 @@
 import React from 'react';
 import { MessageSquarePlus, ShieldCheck, ArrowUpRight, Info } from 'lucide-react';
 import { getWhatsAppUrl, COMMON_MESSAGES } from '../utils/whatsapp';
+import { trackWhatsAppClick } from '../utils/analytics';
 
 export const PricingNote: React.FC = () => {
   return (
@@ -42,6 +43,7 @@ export const PricingNote: React.FC = () => {
                 href={getWhatsAppUrl(COMMON_MESSAGES.customQuote)}
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={() => trackWhatsAppClick('Pricing Note Custom Quote')}
                 className="inline-flex items-center justify-center gap-2.5 bg-brand-orange hover:bg-brand-orange-hover text-white text-base font-bold px-7 py-4 rounded-full shadow-orange-glow transition-all duration-200 active:scale-95 hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-brand-orange"
               >
                 <MessageSquarePlus className="w-5 h-5" />

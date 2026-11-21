@@ -14,19 +14,23 @@ import {
   getWhatsAppUrl,
   WHATSAPP_MESSAGES
 } from '../utils/whatsapp';
-import { SERVICES } from '../data/services';
+import { useServices } from '../utils/servicesStore';
+import { trackWhatsAppClick } from '../utils/analytics';
 
 interface FooterProps {
   onNavigateHome?: () => void;
   onOpenPrivacy?: () => void;
   onOpenTerms?: () => void;
+  onOpenAdmin?: () => void;
 }
 
 export const Footer: React.FC<FooterProps> = ({
   onNavigateHome,
   onOpenPrivacy,
-  onOpenTerms
+  onOpenTerms,
+  onOpenAdmin
 }) => {
+  const [services] = useServices();
   const scrollToTop = () => {
     if (onNavigateHome) onNavigateHome();
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -50,6 +54,7 @@ export const Footer: React.FC<FooterProps> = ({
               href={getWhatsAppUrl(WHATSAPP_MESSAGES.TALK_TO_TEAM)}
               target="_blank"
               rel="noopener noreferrer"
+              onClick={() => trackWhatsAppClick('Footer WhatsApp Callout')}
               className="inline-flex items-center gap-2.5 px-6 py-3 rounded-xl bg-brand-orange hover:bg-orange-600 text-white font-bold text-sm tracking-wide transition-all shadow-md active:scale-95"
             >
               <MessageCircle className="w-4 h-4" />
@@ -209,7 +214,7 @@ export const Footer: React.FC<FooterProps> = ({
               Services
             </h5>
             <ul className="space-y-2.5 text-xs sm:text-sm text-slate-400">
-              {SERVICES.slice(0, 6).map((service) => (
+              {services.slice(0, 6).map((service) => (
                 <li key={service.id}>
                   <a
                     href="#services"
@@ -229,7 +234,7 @@ export const Footer: React.FC<FooterProps> = ({
                   onClick={() => onNavigateHome && onNavigateHome()}
                   className="text-xs text-brand-orange hover:underline font-semibold"
                 >
-                  + View All 8 Services
+                  + View All {services.length} Services
                 </a>
               </li>
             </ul>
@@ -303,6 +308,13 @@ export const Footer: React.FC<FooterProps> = ({
               className="hover:text-white transition-colors cursor-pointer"
             >
               Terms & Conditions
+            </button>
+            <span>•</span>
+            <button
+              onClick={() => onOpenAdmin && onOpenAdmin()}
+              className="hover:text-brand-orange transition-colors cursor-pointer text-slate-400 flex items-center gap-1 font-medium"
+            >
+              Admin Portal
             </button>
             <span>•</span>
             <button

@@ -9,13 +9,19 @@ import {
   MessageCircle, 
   Sparkles, 
   Check, 
-  ArrowUpRight,
-  Tag
+  ArrowUpRight, 
+  Smartphone,
+  TrendingUp,
+  Tag 
 } from 'lucide-react';
-import { SERVICES, ServiceItem } from '../data/services';
+import { ServiceItem } from '../data/services';
+import { useServices } from '../utils/servicesStore';
 import { getWhatsAppUrl } from '../utils/whatsapp';
+import { trackWhatsAppClick } from '../utils/analytics';
 
 export const ServicesCatalogue: React.FC = () => {
+  const [services] = useServices();
+
   const getIcon = (iconName: string) => {
     switch (iconName) {
       case 'Globe':
@@ -34,6 +40,10 @@ export const ServicesCatalogue: React.FC = () => {
         return <MessageCircle className="w-5 h-5" />;
       case 'Sparkles':
         return <Sparkles className="w-5 h-5" />;
+      case 'Smartphone':
+        return <Smartphone className="w-5 h-5" />;
+      case 'TrendingUp':
+        return <TrendingUp className="w-5 h-5" />;
       default:
         return <Globe className="w-5 h-5" />;
     }
@@ -59,7 +69,7 @@ export const ServicesCatalogue: React.FC = () => {
 
         {/* Services Grid (Clean, Responsive, Beautiful) */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8 items-stretch">
-          {SERVICES.map((service: ServiceItem) => {
+          {services.map((service: ServiceItem) => {
             const isPopular = service.popular;
 
             return (
@@ -107,12 +117,14 @@ export const ServicesCatalogue: React.FC = () => {
 
                   {/* Pricing Box */}
                   <div className="bg-brand-soft/80 border border-brand-border/60 rounded-xl p-4 mb-6">
-                    <div className="text-xs text-brand-navy-deep/60 flex items-center gap-2 mb-1">
-                      <span>Regular Price:</span>
-                      <span className="line-through text-brand-navy-deep/50 font-medium">
-                        {service.originalPrice}
-                      </span>
-                    </div>
+                    {service.originalPrice && (
+                      <div className="text-xs text-brand-navy-deep/60 flex items-center gap-2 mb-1">
+                        <span>Regular Price:</span>
+                        <span className="line-through text-brand-navy-deep/50 font-medium">
+                          {service.originalPrice}
+                        </span>
+                      </div>
+                    )}
                     <div className="flex items-baseline gap-1.5">
                       <span className="text-2xl sm:text-3xl font-extrabold text-brand-navy tracking-tight">
                         {service.launchPrice}
@@ -153,6 +165,7 @@ export const ServicesCatalogue: React.FC = () => {
                     href={getWhatsAppUrl(service.whatsappMessage)}
                     target="_blank"
                     rel="noopener noreferrer"
+                    onClick={() => trackWhatsAppClick(`Services Catalogue: ${service.name}`, service.name)}
                     className={`w-full inline-flex items-center justify-center gap-2 text-sm font-bold py-3.5 px-4 rounded-xl transition-all duration-200 active:scale-95 shadow-sm hover:shadow focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-brand-orange ${
                       isPopular
                         ? 'bg-brand-orange hover:bg-brand-orange-hover text-white shadow-orange-glow'

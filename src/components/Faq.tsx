@@ -2,6 +2,7 @@ import React from 'react';
 import { ChevronDown, HelpCircle, MessageCircle } from 'lucide-react';
 import { FAQS } from '../data/faq';
 import { getWhatsAppUrl, WHATSAPP_MESSAGES } from '../utils/whatsapp';
+import { trackWhatsAppClick } from '../utils/analytics';
 
 export const Faq: React.FC = () => {
   return (
@@ -53,6 +54,7 @@ export const Faq: React.FC = () => {
             href={getWhatsAppUrl(WHATSAPP_MESSAGES.TALK_TO_TEAM)}
             target="_blank"
             rel="noopener noreferrer"
+            onClick={() => trackWhatsAppClick('FAQ Direct WhatsApp')}
             className="inline-flex items-center gap-2 mt-4 px-5 py-2.5 rounded-xl bg-brand-navy hover:bg-brand-navy-deep text-white text-xs sm:text-sm font-semibold tracking-wide transition-all shadow-md active:scale-95"
           >
             <MessageCircle className="w-4 h-4 text-brand-orange" />

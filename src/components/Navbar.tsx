@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { Menu, X, MessageCircle, Phone, ArrowUpRight } from 'lucide-react';
 import { getWhatsAppUrl, COMMON_MESSAGES, PRIMARY_PHONE } from '../utils/whatsapp';
+import { trackWhatsAppClick } from '../utils/analytics';
 
 interface NavbarProps {
   onNavigateHome: () => void;
   onOpenPrivacy?: () => void;
   onOpenTerms?: () => void;
-  currentView?: 'home' | 'privacy' | 'terms';
+  onOpenAdmin?: () => void;
+  currentView?: 'home' | 'privacy' | 'terms' | 'admin';
 }
 
-export const Navbar: React.FC<NavbarProps> = ({ onNavigateHome, currentView = 'home' }) => {
+export const Navbar: React.FC<NavbarProps> = ({ onNavigateHome, onOpenAdmin, currentView = 'home' }) => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -98,10 +100,21 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigateHome, currentView = 'h
               <span>{PRIMARY_PHONE}</span>
             </a>
 
+            {onOpenAdmin && (
+              <button
+                onClick={onOpenAdmin}
+                className="text-xs font-semibold text-brand-navy-deep/60 hover:text-brand-orange px-2 py-1 rounded-lg hover:bg-brand-soft transition-colors"
+                title="Admin Portal"
+              >
+                Admin
+              </button>
+            )}
+
             <a
               href={getWhatsAppUrl(COMMON_MESSAGES.getStarted)}
               target="_blank"
               rel="noopener noreferrer"
+              onClick={() => trackWhatsAppClick('Navbar "Get Started"')}
               className="inline-flex items-center justify-center gap-2 bg-brand-orange hover:bg-brand-orange-hover text-white text-sm font-bold px-5 py-2.5 rounded-full shadow-orange-glow transition-all duration-200 hover:shadow-lg active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-brand-orange"
             >
               <MessageCircle className="w-4 h-4 fill-white text-white" />
@@ -116,6 +129,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigateHome, currentView = 'h
               href={getWhatsAppUrl(COMMON_MESSAGES.getStarted)}
               target="_blank"
               rel="noopener noreferrer"
+              onClick={() => trackWhatsAppClick('Navbar Mobile WhatsApp Icon')}
               className="inline-flex items-center justify-center bg-brand-orange text-white p-2 rounded-full shadow-sm"
               aria-label="Contact on WhatsApp"
             >
@@ -155,6 +169,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigateHome, currentView = 'h
                 href={getWhatsAppUrl(COMMON_MESSAGES.getStarted)}
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={() => trackWhatsAppClick('Navbar Mobile Drawer WhatsApp')}
                 className="w-full inline-flex items-center justify-center gap-2 bg-brand-orange text-white font-bold py-3 px-4 rounded-xl shadow-orange-glow active:scale-95"
               >
                 <MessageCircle className="w-5 h-5 fill-white" />

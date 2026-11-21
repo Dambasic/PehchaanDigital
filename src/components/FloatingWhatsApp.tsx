@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { MessageCircle, X } from 'lucide-react';
 import { getWhatsAppUrl, WHATSAPP_MESSAGES } from '../utils/whatsapp';
+import { trackWhatsAppClick } from '../utils/analytics';
 
 export const FloatingWhatsApp: React.FC = () => {
   const [showTooltip, setShowTooltip] = useState(true);
@@ -30,6 +31,7 @@ export const FloatingWhatsApp: React.FC = () => {
         href={getWhatsAppUrl(WHATSAPP_MESSAGES.TALK_TO_TEAM)}
         target="_blank"
         rel="noopener noreferrer"
+        onClick={() => trackWhatsAppClick('Floating WhatsApp Button')}
         aria-label="Chat with Pehchaan Digital on WhatsApp"
         className="group relative flex items-center justify-center w-14 h-14 rounded-full bg-[#25D366] hover:bg-[#20bd5a] text-white shadow-2xl transition-all duration-300 hover:scale-110 active:scale-95 focus:outline-none focus:ring-4 focus:ring-emerald-300"
       >

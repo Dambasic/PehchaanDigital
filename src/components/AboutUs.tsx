@@ -1,6 +1,7 @@
 import React from 'react';
 import { MapPin, Target, Sparkles, ShieldCheck, ArrowUpRight, MessageCircle } from 'lucide-react';
 import { getWhatsAppUrl, WHATSAPP_MESSAGES } from '../utils/whatsapp';
+import { trackWhatsAppClick } from '../utils/analytics';
 
 export const AboutUs: React.FC = () => {
   return (
@@ -56,6 +57,7 @@ export const AboutUs: React.FC = () => {
                 href={getWhatsAppUrl(WHATSAPP_MESSAGES.TALK_TO_TEAM)}
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={() => trackWhatsAppClick('About Us WhatsApp CTA')}
                 className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-brand-orange hover:bg-orange-600 text-white font-semibold text-xs tracking-wide transition-all shadow-md active:scale-95"
               >
                 <MessageCircle className="w-3.5 h-3.5" />

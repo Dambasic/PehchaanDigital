@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Analytics } from '@vercel/analytics/react';
 import { Navbar } from './components/Navbar';
 import { Hero } from './components/Hero';
 import { TrustIntro } from './components/TrustIntro';
@@ -15,17 +16,29 @@ import { Footer } from './components/Footer';
 import { FloatingWhatsApp } from './components/FloatingWhatsApp';
 import { PrivacyPolicy } from './pages/PrivacyPolicy';
 import { TermsConditions } from './pages/TermsConditions';
+import { AdminPanel } from './components/admin/AdminPanel';
+import { trackPageView } from './utils/analytics';
 
-type CurrentView = 'main' | 'privacy' | 'terms';
+type CurrentView = 'main' | 'privacy' | 'terms' | 'admin';
 
 export const App: React.FC = () => {
   const [view, setView] = useState<CurrentView>('main');
 
-  // Handle URL hash changes for deep linking (e.g. #privacy, #terms)
+  // Track initial page view telemetry
+  useEffect(() => {
+    trackPageView();
+  }, []);
+
+  // Handle URL hash & deep linking (e.g. #admin, #privacy, #terms)
   useEffect(() => {
     const handleHash = () => {
       const hash = window.location.hash.toLowerCase();
-      if (hash === '#privacy') {
+      const search = window.location.search.toLowerCase();
+      
+      if (hash === '#admin' || search.includes('admin')) {
+        setView('admin');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } else if (hash === '#privacy') {
         setView('privacy');
         window.scrollTo({ top: 0, behavior: 'smooth' });
       } else if (hash === '#terms') {
@@ -43,7 +56,10 @@ export const App: React.FC = () => {
 
   const navigateTo = (newView: CurrentView, hashTarget?: string) => {
     setView(newView);
-    if (newView === 'privacy') {
+    if (newView === 'admin') {
+      window.location.hash = 'admin';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else if (newView === 'privacy') {
       window.location.hash = 'privacy';
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } else if (newView === 'terms') {
@@ -63,18 +79,42 @@ export const App: React.FC = () => {
     }
   };
 
+  // Admin View
+  if (view === 'admin') {
+    return (
+      <>
+        <AdminPanel onBackToSite={() => navigateTo('main')} />
+        <Analytics />
+      </>
+    );
+  }
+
+  // Legal Pages
   if (view === 'privacy') {
-    return <PrivacyPolicy onBack={() => navigateTo('main')} />;
+    return (
+      <>
+        <PrivacyPolicy onBack={() => navigateTo('main')} />
+        <Analytics />
+      </>
+    );
   }
 
   if (view === 'terms') {
-    return <TermsConditions onBack={() => navigateTo('main')} />;
+    return (
+      <>
+        <TermsConditions onBack={() => navigateTo('main')} />
+        <Analytics />
+      </>
+    );
   }
 
   return (
     <div className="min-h-screen bg-[#F7F9FC] text-[#061B3A] flex flex-col selection:bg-brand-orange selection:text-white">
       {/* Sticky Compact Navbar */}
-      <Navbar onNavigateHome={() => navigateTo('main')} />
+      <Navbar 
+        onNavigateHome={() => navigateTo('main')} 
+        onOpenAdmin={() => navigateTo('admin')}
+      />
 
       {/* Main Content Sections */}
       <main id="main-content" className="flex-grow">
@@ -96,31 +136,35 @@ export const App: React.FC = () => {
         {/* Section 6: Why Choose Us */}
         <WhyChooseUs />
 
-        {/* Section 6: Our Work Process */}
+        {/* Section 7: Our Work Process */}
         <WorkProcess />
 
-        {/* Section 7: Industries We Serve */}
+        {/* Section 8: Industries We Serve */}
         <Industries />
 
-        {/* Section 8: About Us */}
+        {/* Section 9: About Us */}
         <AboutUs />
 
-        {/* Section 9: FAQ (Semantic Modern Accordion) */}
+        {/* Section 10: FAQ (Semantic Modern Accordion) */}
         <Faq />
 
-        {/* Section 10: Contact & WhatsApp Enquiry Form */}
+        {/* Section 11: Contact & WhatsApp Enquiry Form */}
         <ContactSection />
       </main>
 
-      {/* Section 11: Dark Navy Footer */}
+      {/* Section 12: Dark Navy Footer */}
       <Footer
         onNavigateHome={() => navigateTo('main')}
         onOpenPrivacy={() => navigateTo('privacy')}
         onOpenTerms={() => navigateTo('terms')}
+        onOpenAdmin={() => navigateTo('admin')}
       />
 
       {/* Floating Action WhatsApp CTA */}
       <FloatingWhatsApp />
+
+      {/* Vercel Web Analytics */}
+      <Analytics />
     </div>
   );
 };
