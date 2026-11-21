@@ -1,7 +1,7 @@
 /**
  * Pehchaan Digital Analytics Tracking & Storage Utility
- * Tracks: Visitors, Total Visits, WhatsApp Button Clicks (by source & product),
- * Conversions, Countries, Devices, and Live Event Streams.
+ * Pure Real-Time Telemetry: 0 fake data, tracks only real user visits,
+ * real WhatsApp button clicks, and real enquiry conversions.
  */
 
 export interface CountryStat {
@@ -42,108 +42,42 @@ export interface AnalyticsData {
   lastUpdated: number;
 }
 
-const STORAGE_KEY = 'pehchaan_analytics_store_v1';
+// Clean Real-Time Storage Keys
+const STORAGE_KEY = 'pehchaan_analytics_realtime_v2';
+const OLD_STORAGE_KEY = 'pehchaan_analytics_store_v1';
 const VISITOR_KEY = 'pehchaan_visitor_uuid';
 const CACHED_COUNTRY_KEY = 'pehchaan_detected_country';
 const ANALYTICS_EVENT = 'pehchaan_analytics_updated';
 
-// Default realistic baseline dataset so the analytics dashboard is informative immediately
-const INITIAL_ANALYTICS: AnalyticsData = {
-  totalVisits: 3480,
-  uniqueVisitors: 2190,
-  totalConversions: 84,
-  totalWhatsAppClicks: 472,
-  clicksBySource: {
-    'Hero WhatsApp CTA': 138,
-    'Floating WhatsApp Button': 124,
-    'Services Catalogue': 116,
-    'Contact Form WhatsApp': 46,
-    'Navbar "Let\'s Talk"': 26,
-    'Pricing Note': 14,
-    'Footer WhatsApp': 8
-  },
-  clicksByService: {
-    'Website Development': 152,
-    'Social Media Management': 98,
-    'Landing Page Development': 74,
-    'SEO Services': 53,
-    'Google Business Profile Setup': 48,
-    'Website Redesign': 27,
-    'Brand Identity & Design': 14,
-    'WhatsApp Business Setup': 6
-  },
-  countryStats: {
-    'IN': { code: 'IN', name: 'India', flag: '🇮🇳', visits: 2850, clicks: 395 },
-    'AE': { code: 'AE', name: 'United Arab Emirates', flag: '🇦🇪', visits: 260, clicks: 38 },
-    'US': { code: 'US', name: 'United States', flag: '🇺🇸', visits: 185, clicks: 18 },
-    'GB': { code: 'GB', name: 'United Kingdom', flag: '🇬🇧', visits: 95, clicks: 11 },
-    'SG': { code: 'SG', name: 'Singapore', flag: '🇸🇬', visits: 52, clicks: 6 },
-    'CA': { code: 'CA', name: 'Canada', flag: '🇨🇦', visits: 38, clicks: 4 }
-  },
+// Zero-base initial real-time structure
+const ZERO_ANALYTICS: AnalyticsData = {
+  totalVisits: 0,
+  uniqueVisitors: 0,
+  totalConversions: 0,
+  totalWhatsAppClicks: 0,
+  clicksBySource: {},
+  clicksByService: {},
+  countryStats: {},
   deviceBreakdown: {
-    mobile: 2436, // ~70%
-    desktop: 905, // ~26%
-    tablet: 139   // ~4%
+    mobile: 0,
+    desktop: 0,
+    tablet: 0
   },
-  events: [
-    {
-      id: 'init-1',
-      type: 'whatsapp_click',
-      title: 'WhatsApp Click: Website Development',
-      subtitle: 'Service Catalogue launch offer card',
-      country: 'India',
-      countryCode: 'IN',
-      flag: '🇮🇳',
-      device: 'Mobile',
-      timestamp: Date.now() - 1000 * 60 * 12 // 12 mins ago
-    },
-    {
-      id: 'init-2',
-      type: 'conversion',
-      title: 'Enquiry Form Submitted',
-      subtitle: 'Project inquiry for Falcon Packwell redesign',
-      country: 'India',
-      countryCode: 'IN',
-      flag: '🇮🇳',
-      device: 'Desktop',
-      timestamp: Date.now() - 1000 * 60 * 45 // 45 mins ago
-    },
-    {
-      id: 'init-3',
-      type: 'whatsapp_click',
-      title: 'WhatsApp Click: Hero CTA',
-      subtitle: 'Direct discussion started from Hero button',
-      country: 'United Arab Emirates',
-      countryCode: 'AE',
-      flag: '🇦🇪',
-      device: 'Mobile',
-      timestamp: Date.now() - 1000 * 60 * 85
-    },
-    {
-      id: 'init-4',
-      type: 'whatsapp_click',
-      title: 'WhatsApp Click: Social Media Management',
-      subtitle: 'Monthly retainer package enquiry',
-      country: 'India',
-      countryCode: 'IN',
-      flag: '🇮🇳',
-      device: 'Mobile',
-      timestamp: Date.now() - 1000 * 60 * 150
-    },
-    {
-      id: 'init-5',
-      type: 'visit',
-      title: 'Website Page View',
-      subtitle: 'Organic visit to homepage',
-      country: 'United States',
-      countryCode: 'US',
-      flag: '🇺🇸',
-      device: 'Desktop',
-      timestamp: Date.now() - 1000 * 60 * 210
-    }
-  ],
+  events: [],
   lastUpdated: Date.now()
 };
+
+// Clean up any legacy mock data from previous sessions
+function cleanupLegacyMockData() {
+  if (typeof window === 'undefined') return;
+  try {
+    if (localStorage.getItem(OLD_STORAGE_KEY)) {
+      localStorage.removeItem(OLD_STORAGE_KEY);
+    }
+  } catch (e) {
+    // ignore
+  }
+}
 
 // Helper to detect current device
 export function detectDevice(): 'Mobile' | 'Desktop' | 'Tablet' {
@@ -158,7 +92,31 @@ export function detectDevice(): 'Mobile' | 'Desktop' | 'Tablet' {
   return 'Desktop';
 }
 
-// Fallback country detection from timezone / locale
+// Map country code to flag emoji
+function getCountryFlag(code: string): string {
+  const flags: Record<string, string> = {
+    'IN': '🇮🇳',
+    'AE': '🇦🇪',
+    'US': '🇺🇸',
+    'GB': '🇬🇧',
+    'CA': '🇨🇦',
+    'SG': '🇸🇬',
+    'AU': '🇦🇺',
+    'DE': '🇩🇪',
+    'SA': '🇸🇦',
+    'QA': '🇶🇦',
+    'KW': '🇰🇼',
+    'OM': '🇴🇲',
+    'FR': '🇫🇷',
+    'NL': '🇳🇱',
+    'NZ': '🇳🇿',
+    'MY': '🇲🇾',
+    'ZA': '🇿🇦'
+  };
+  return flags[code] || '🌐';
+}
+
+// Fallback country detection from browser timezone / locale
 function detectCountryFromBrowser(): { code: string; name: string; flag: string } {
   try {
     const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
@@ -189,7 +147,7 @@ function detectCountryFromBrowser(): { code: string; name: string; flag: string 
   return { code: 'IN', name: 'India', flag: '🇮🇳' };
 }
 
-// Fetch or resolve detected country
+// Resolve detected country in real-time
 export async function getDetectedCountry(): Promise<{ code: string; name: string; flag: string }> {
   if (typeof window === 'undefined') {
     return { code: 'IN', name: 'India', flag: '🇮🇳' };
@@ -204,7 +162,7 @@ export async function getDetectedCountry(): Promise<{ code: string; name: string
     }
   }
 
-  // Attempt lightweight fetch
+  // Attempt real lightweight IP country lookup
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 2000);
@@ -213,18 +171,28 @@ export async function getDetectedCountry(): Promise<{ code: string; name: string
     if (res.ok) {
       const data = await res.json();
       const code = data.country || 'IN';
-      const countryNames: Record<string, { name: string; flag: string }> = {
-        'IN': { name: 'India', flag: '🇮🇳' },
-        'AE': { name: 'United Arab Emirates', flag: '🇦🇪' },
-        'US': { name: 'United States', flag: '🇺🇸' },
-        'GB': { name: 'United Kingdom', flag: '🇬🇧' },
-        'CA': { name: 'Canada', flag: '🇨🇦' },
-        'SG': { name: 'Singapore', flag: '🇸🇬' },
-        'AU': { name: 'Australia', flag: '🇦🇺' },
-        'DE': { name: 'Germany', flag: '🇩🇪' },
+      const countryNames: Record<string, string> = {
+        'IN': 'India',
+        'AE': 'United Arab Emirates',
+        'US': 'United States',
+        'GB': 'United Kingdom',
+        'CA': 'Canada',
+        'SG': 'Singapore',
+        'AU': 'Australia',
+        'DE': 'Germany',
+        'SA': 'Saudi Arabia',
+        'QA': 'Qatar',
+        'KW': 'Kuwait',
+        'OM': 'Oman',
+        'FR': 'France',
+        'NL': 'Netherlands',
+        'NZ': 'New Zealand',
+        'MY': 'Malaysia',
+        'ZA': 'South Africa'
       };
-      const info = countryNames[code] || { name: code, flag: '🌐' };
-      const result = { code, name: info.name, flag: info.flag };
+      const name = countryNames[code] || code;
+      const flag = getCountryFlag(code);
+      const result = { code, name, flag };
       localStorage.setItem(CACHED_COUNTRY_KEY, JSON.stringify(result));
       return result;
     }
@@ -239,21 +207,33 @@ export async function getDetectedCountry(): Promise<{ code: string; name: string
 
 // Read full analytics data from storage
 export function getAnalyticsData(): AnalyticsData {
-  if (typeof window === 'undefined') return INITIAL_ANALYTICS;
+  cleanupLegacyMockData();
+  if (typeof window === 'undefined') return { ...ZERO_ANALYTICS };
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(INITIAL_ANALYTICS));
-      return INITIAL_ANALYTICS;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(ZERO_ANALYTICS));
+      return { ...ZERO_ANALYTICS };
     }
     const parsed = JSON.parse(raw);
-    return { ...INITIAL_ANALYTICS, ...parsed };
+    return {
+      totalVisits: parsed.totalVisits || 0,
+      uniqueVisitors: parsed.uniqueVisitors || 0,
+      totalConversions: parsed.totalConversions || 0,
+      totalWhatsAppClicks: parsed.totalWhatsAppClicks || 0,
+      clicksBySource: parsed.clicksBySource || {},
+      clicksByService: parsed.clicksByService || {},
+      countryStats: parsed.countryStats || {},
+      deviceBreakdown: parsed.deviceBreakdown || { mobile: 0, desktop: 0, tablet: 0 },
+      events: Array.isArray(parsed.events) ? parsed.events : [],
+      lastUpdated: parsed.lastUpdated || Date.now()
+    };
   } catch (e) {
-    return INITIAL_ANALYTICS;
+    return { ...ZERO_ANALYTICS };
   }
 }
 
-// Save analytics data and dispatch event
+// Save analytics data and dispatch update event
 function saveAnalyticsData(data: AnalyticsData) {
   if (typeof window === 'undefined') return;
   try {
@@ -261,15 +241,15 @@ function saveAnalyticsData(data: AnalyticsData) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
     window.dispatchEvent(new CustomEvent(ANALYTICS_EVENT, { detail: data }));
   } catch (e) {
-    console.error('Failed to save analytics:', e);
+    console.error('Failed to save real-time analytics:', e);
   }
 }
 
-// Track a page view / visitor
+// Track a real page view / visitor
 export async function trackPageView(): Promise<void> {
   if (typeof window === 'undefined') return;
   
-  // Don't track multiple page views in short session within same tab refresh
+  // Prevent duplicate page view within the same session tab
   const sessionKey = 'pehchaan_session_view_logged';
   if (sessionStorage.getItem(sessionKey)) return;
   sessionStorage.setItem(sessionKey, 'true');
@@ -288,7 +268,7 @@ export async function trackPageView(): Promise<void> {
     data.uniqueVisitors += 1;
   }
 
-  // Update country visits
+  // Update country stats
   if (!data.countryStats[country.code]) {
     data.countryStats[country.code] = {
       code: country.code,
@@ -301,29 +281,29 @@ export async function trackPageView(): Promise<void> {
     data.countryStats[country.code].visits += 1;
   }
 
-  // Update device
+  // Update device stats
   if (device === 'Mobile') data.deviceBreakdown.mobile += 1;
   else if (device === 'Desktop') data.deviceBreakdown.desktop += 1;
   else data.deviceBreakdown.tablet += 1;
 
-  // Prepend event
+  // Record real event
   const newEvent: AnalyticsEvent = {
-    id: 'evt_' + Date.now() + '_' + Math.random().toString(36).substring(2, 5),
+    id: 'evt_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
     type: 'visit',
     title: 'Website Page View',
-    subtitle: `Session started on ${device}`,
+    subtitle: `Real session on ${device}`,
     country: country.name,
     countryCode: country.code,
     flag: country.flag,
     device,
     timestamp: Date.now()
   };
-  data.events = [newEvent, ...(data.events || [])].slice(0, 100);
+  data.events = [newEvent, ...(data.events || [])].slice(0, 200);
 
   saveAnalyticsData(data);
 }
 
-// Track WhatsApp button click
+// Track real WhatsApp button click
 export async function trackWhatsAppClick(source: string, serviceName?: string): Promise<void> {
   if (typeof window === 'undefined') return;
 
@@ -333,10 +313,10 @@ export async function trackWhatsAppClick(source: string, serviceName?: string): 
 
   data.totalWhatsAppClicks += 1;
 
-  // Track by button source
+  // Track by touchpoint
   data.clicksBySource[source] = (data.clicksBySource[source] || 0) + 1;
 
-  // Track by service name if provided
+  // Track by service name if applicable
   if (serviceName) {
     data.clicksByService[serviceName] = (data.clicksByService[serviceName] || 0) + 1;
   }
@@ -354,12 +334,12 @@ export async function trackWhatsAppClick(source: string, serviceName?: string): 
     data.countryStats[country.code].clicks += 1;
   }
 
-  // Prepend event
+  // Record real event
   const newEvent: AnalyticsEvent = {
-    id: 'evt_' + Date.now() + '_' + Math.random().toString(36).substring(2, 5),
+    id: 'evt_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
     type: 'whatsapp_click',
-    title: serviceName ? `WhatsApp Click: ${serviceName}` : `WhatsApp Click (${source})`,
-    subtitle: `Clicked from ${source}`,
+    title: serviceName ? `WhatsApp: ${serviceName}` : `WhatsApp Click`,
+    subtitle: source,
     country: country.name,
     countryCode: country.code,
     flag: country.flag,
@@ -367,12 +347,12 @@ export async function trackWhatsAppClick(source: string, serviceName?: string): 
     timestamp: Date.now(),
     meta: serviceName
   };
-  data.events = [newEvent, ...(data.events || [])].slice(0, 100);
+  data.events = [newEvent, ...(data.events || [])].slice(0, 200);
 
   saveAnalyticsData(data);
 }
 
-// Track form submission / enquiry conversion
+// Track real form submission / enquiry conversion
 export async function trackConversion(type: string, serviceName?: string): Promise<void> {
   if (typeof window === 'undefined') return;
 
@@ -387,10 +367,10 @@ export async function trackConversion(type: string, serviceName?: string): Promi
   }
 
   const newEvent: AnalyticsEvent = {
-    id: 'evt_' + Date.now() + '_' + Math.random().toString(36).substring(2, 5),
+    id: 'evt_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
     type: 'conversion',
     title: `Enquiry Conversion (${type})`,
-    subtitle: serviceName ? `Requested package: ${serviceName}` : 'General business enquiry submitted',
+    subtitle: serviceName ? `Package: ${serviceName}` : 'Enquiry submitted',
     country: country.name,
     countryCode: country.code,
     flag: country.flag,
@@ -398,13 +378,14 @@ export async function trackConversion(type: string, serviceName?: string): Promi
     timestamp: Date.now(),
     meta: serviceName
   };
-  data.events = [newEvent, ...(data.events || [])].slice(0, 100);
+  data.events = [newEvent, ...(data.events || [])].slice(0, 200);
 
   saveAnalyticsData(data);
 }
 
-// Reset analytics
+// Reset analytics strictly to zero
 export function resetAnalyticsData(): void {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(INITIAL_ANALYTICS));
-  window.dispatchEvent(new CustomEvent(ANALYTICS_EVENT, { detail: INITIAL_ANALYTICS }));
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(ZERO_ANALYTICS));
+  window.dispatchEvent(new CustomEvent(ANALYTICS_EVENT, { detail: ZERO_ANALYTICS }));
 }

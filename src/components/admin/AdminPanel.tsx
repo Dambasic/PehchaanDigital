@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   LayoutDashboard, 
   Package, 
@@ -15,7 +15,6 @@ import {
   ShieldCheck, 
   TrendingUp, 
   Users, 
-  MousePointerClick, 
   Globe, 
   Smartphone, 
   Monitor, 
@@ -45,7 +44,6 @@ import {
 import { 
   getAnalyticsData, 
   resetAnalyticsData, 
-  trackWhatsAppClick, 
   AnalyticsData
 } from '../../utils/analytics';
 import { getWhatsAppUrl } from '../../utils/whatsapp';
@@ -78,7 +76,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBackToSite }) => {
   // Quick Price Edit Inline Modal State
   const [quickPriceItem, setQuickPriceItem] = useState<{ id: string; name: string; launchPrice: string; originalPrice: string; isMonthly?: boolean } | null>(null);
 
-  // Analytics State
+  // Analytics State (Strictly Real-Time)
   const [analytics, setAnalytics] = useState<AnalyticsData>(() => getAnalyticsData());
   const [timeFilter, setTimeFilter] = useState<'today' | '7d' | '30d' | 'all'>('all');
   const [eventFilter, setEventFilter] = useState<'all' | 'whatsapp' | 'conversion' | 'visit'>('all');
@@ -96,7 +94,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBackToSite }) => {
     setTimeout(() => setToastMessage(null), 3000);
   };
 
-  // Sync analytics changes
+  // Sync real-time analytics updates
   useEffect(() => {
     const handleAnalyticsUpdate = () => {
       setAnalytics(getAnalyticsData());
@@ -224,18 +222,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBackToSite }) => {
 
   // Reset Analytics
   const handleResetAnalytics = () => {
-    if (window.confirm('Reset all website analytics counters?')) {
+    if (window.confirm('Reset all website analytics counters to 0?')) {
       resetAnalyticsData();
-      showToast('Analytics counters reset!');
+      showToast('Analytics counters reset to 0!');
     }
-  };
-
-  // Simulate a live test click
-  const handleSimulateTestClick = async () => {
-    const sampleServices = ['Website Development', 'Social Media Management', 'Landing Page Development', 'SEO Services'];
-    const chosen = sampleServices[Math.floor(Math.random() * sampleServices.length)];
-    await trackWhatsAppClick('Admin Live Simulation', chosen);
-    showToast(`Simulated WhatsApp click for "${chosen}"!`);
   };
 
   // Export Analytics JSON
@@ -243,7 +233,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBackToSite }) => {
     const jsonStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(analytics, null, 2));
     const dlAnchor = document.createElement('a');
     dlAnchor.setAttribute("href", jsonStr);
-    dlAnchor.setAttribute("download", `pehchaan_analytics_${new Date().toISOString().split('T')[0]}.json`);
+    dlAnchor.setAttribute("download", `pehchaan_analytics_realtime_${new Date().toISOString().split('T')[0]}.json`);
     dlAnchor.click();
     showToast('Analytics report downloaded!');
   };
@@ -270,7 +260,95 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBackToSite }) => {
     s.deliverables.some(d => d.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
-  // Filtered events
+  // REAL-TIME TIME-RANGE CALCULATIONS (Strictly derived from actual real events)
+  const realTimeMetrics = useMemo(() => {
+    const now = Date.now();
+    const startOfToday = new Date().setHours(0, 0, 0, 0);
+
+    const cutoff = 
+      timeFilter === 'today' ? startOfToday :
+      timeFilter === '7d' ? now - 7 * 86400 * 1000 :
+      timeFilter === '30d' ? now - 30 * 86400 * 1000 : 0;
+
+    const allEvents = analytics.events || [];
+    const periodEvents = cutoff > 0 ? allEvents.filter(e => e.timestamp >= cutoff) : allEvents;
+
+    // If 'all', use total persisted accumulators directly; if timeframe selected, use exact real event count
+    let visits = 0;
+    let unique = 0;
+    let clicks = 0;
+    let conversions = 0;
+    const sourceCounts: Record<string, number> = {};
+    const serviceCounts: Record<string, number> = {};
+    const countryMap: Record<string, { code: string; name: string; flag: string; visits: number; clicks: number }> = {};
+    const devices = { mobile: 0, desktop: 0, tablet: 0 };
+
+    if (timeFilter === 'all') {
+      visits = analytics.totalVisits;
+      unique = analytics.uniqueVisitors;
+      clicks = analytics.totalWhatsAppClicks;
+      conversions = analytics.totalConversions;
+      Object.assign(sourceCounts, analytics.clicksBySource);
+      Object.assign(serviceCounts, analytics.clicksByService);
+      Object.assign(countryMap, analytics.countryStats);
+      Object.assign(devices, analytics.deviceBreakdown);
+    } else {
+      periodEvents.forEach(e => {
+        // Device
+        if (e.device === 'Mobile') devices.mobile += 1;
+        else if (e.device === 'Desktop') devices.desktop += 1;
+        else devices.tablet += 1;
+
+        // Country
+        if (!countryMap[e.countryCode]) {
+          countryMap[e.countryCode] = {
+            code: e.countryCode,
+            name: e.country,
+            flag: e.flag,
+            visits: 0,
+            clicks: 0
+          };
+        }
+
+        if (e.type === 'visit') {
+          visits += 1;
+          countryMap[e.countryCode].visits += 1;
+        } else if (e.type === 'whatsapp_click') {
+          clicks += 1;
+          countryMap[e.countryCode].clicks += 1;
+          const src = e.subtitle || 'WhatsApp';
+          sourceCounts[src] = (sourceCounts[src] || 0) + 1;
+          if (e.meta) {
+            serviceCounts[e.meta] = (serviceCounts[e.meta] || 0) + 1;
+          }
+        } else if (e.type === 'conversion') {
+          conversions += 1;
+          if (e.meta) {
+            serviceCounts[e.meta] = (serviceCounts[e.meta] || 0) + 1;
+          }
+        }
+      });
+      unique = visits > 0 ? Math.min(visits, analytics.uniqueVisitors) : 0;
+    }
+
+    const ctr = visits > 0 ? ((clicks / visits) * 100).toFixed(1) : '0.0';
+    const sortedCountries = Object.values(countryMap).sort((a, b) => (b.clicks + b.visits) - (a.clicks + a.visits));
+
+    return {
+      visits,
+      unique,
+      clicks,
+      conversions,
+      ctr,
+      sourceCounts,
+      serviceCounts,
+      countryList: sortedCountries,
+      devices,
+      periodEvents
+    };
+  }, [analytics, timeFilter]);
+
+  // Filtered events for real-time live feed
   const filteredEvents = (analytics.events || []).filter(e => {
     if (eventFilter === 'all') return true;
     if (eventFilter === 'whatsapp') return e.type === 'whatsapp_click';
@@ -278,17 +356,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBackToSite }) => {
     if (eventFilter === 'visit') return e.type === 'visit';
     return true;
   });
-
-  // Calculate Country stats array sorted by clicks descending
-  const countryList = Object.values(analytics.countryStats || {}).sort((a, b) => b.clicks - a.clicks);
-
-  // Time filter multiplier for display
-  const timeMultiplier = timeFilter === 'today' ? 0.08 : timeFilter === '7d' ? 0.32 : timeFilter === '30d' ? 0.85 : 1;
-  const displayVisits = Math.round(analytics.totalVisits * timeMultiplier);
-  const displayUnique = Math.round(analytics.uniqueVisitors * timeMultiplier);
-  const displayClicks = Math.round(analytics.totalWhatsAppClicks * timeMultiplier);
-  const displayConversions = Math.round(analytics.totalConversions * timeMultiplier);
-  const conversionRate = displayVisits > 0 ? ((displayClicks / displayVisits) * 100).toFixed(1) : '0.0';
 
   // If Not Authenticated -> Show Login Gate
   if (!isAuthenticated) {
@@ -300,7 +367,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBackToSite }) => {
               <Lock className="w-8 h-8 text-white" />
             </div>
             <h1 className="text-2xl font-black text-white tracking-tight">Pehchaan Digital</h1>
-            <p className="text-sm font-medium text-slate-400 mt-1">Admin Portal & Analytics Control</p>
+            <p className="text-sm font-medium text-slate-400 mt-1">Admin Portal & Real-Time Analytics</p>
           </div>
 
           <form onSubmit={handleLogin} className="space-y-5">
@@ -345,7 +412,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBackToSite }) => {
             </button>
           </form>
 
-          {/* Quick Demo Assist */}
+          {/* Quick Passcode Assist */}
           <div className="mt-6 pt-5 border-t border-slate-700/60 text-center">
             <div className="inline-block p-2 rounded-lg bg-slate-950/60 border border-slate-700/50 text-xs text-slate-400">
               <span className="text-slate-300 font-medium">Default Passcode:</span>{' '}
@@ -403,7 +470,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBackToSite }) => {
               </div>
               <div className="flex items-center gap-1.5 text-[11px] text-emerald-400">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                <span>Live Analytics & Product Engine</span>
+                <span>Pure Real-Time Telemetry (0 Mock Data)</span>
               </div>
             </div>
           </div>
@@ -419,7 +486,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBackToSite }) => {
               }`}
             >
               <LayoutDashboard className="w-4 h-4" />
-              <span>Deep Analytics</span>
+              <span>Real-Time Analytics</span>
             </button>
             <button
               onClick={() => setActiveTab('products')}
@@ -502,7 +569,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBackToSite }) => {
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
         
         {/* ======================================================== */}
-        {/* TAB 1: ANALYTICS DASHBOARD                               */}
+        {/* TAB 1: REAL-TIME ANALYTICS DASHBOARD                     */}
         {/* ======================================================== */}
         {activeTab === 'analytics' && (
           <div className="space-y-8 animate-in fade-in duration-300">
@@ -512,15 +579,15 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBackToSite }) => {
               <div>
                 <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight flex items-center gap-2">
                   <Activity className="w-6 h-6 text-[#EA580C]" />
-                  <span>Website Performance & Feature Analytics</span>
+                  <span>Real-Time Website Telemetry</span>
                 </h2>
                 <p className="text-xs sm:text-sm text-slate-400 mt-1">
-                  Real-time telemetry of visitor traffic, WhatsApp click conversions, and country metrics.
+                  Pure real-time metrics. Captures actual visitor traffic, WhatsApp button taps, and conversions.
                 </p>
               </div>
 
               <div className="flex flex-wrap items-center gap-2">
-                {/* Time Range Pills */}
+                {/* Time Range Filter */}
                 <div className="inline-flex bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs">
                   <button
                     onClick={() => setTimeFilter('today')}
@@ -556,26 +623,18 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBackToSite }) => {
                   </button>
                 </div>
 
-                {/* Simulate / Export buttons */}
-                <button
-                  onClick={handleSimulateTestClick}
-                  className="px-3 py-1.5 rounded-xl bg-orange-500/20 hover:bg-orange-500/30 text-orange-400 text-xs font-bold border border-orange-500/30 transition-all flex items-center gap-1.5"
-                  title="Simulate a real-time WhatsApp click from visitor"
-                >
-                  <MousePointerClick className="w-3.5 h-3.5" />
-                  <span>Test Click</span>
-                </button>
+                {/* Export Button */}
                 <button
                   onClick={handleExportAnalytics}
                   className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold border border-slate-700 transition-all flex items-center gap-1.5"
                 >
                   <Download className="w-3.5 h-3.5" />
-                  <span>Export</span>
+                  <span>Export JSON</span>
                 </button>
               </div>
             </div>
 
-            {/* Metric KPI Cards */}
+            {/* Metric KPI Cards (Actual Real Numbers) */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
               
               {/* Total Visits */}
@@ -587,13 +646,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBackToSite }) => {
                   </div>
                 </div>
                 <div className="text-3xl font-extrabold text-white tracking-tight">
-                  {displayVisits.toLocaleString()}
+                  {realTimeMetrics.visits.toLocaleString()}
                 </div>
-                <div className="mt-3 flex items-center gap-2 text-xs">
-                  <span className="text-emerald-400 font-bold flex items-center">
-                    <TrendingUp className="w-3 h-3 mr-0.5" /> +14.8%
-                  </span>
-                  <span className="text-slate-500">vs last period</span>
+                <div className="mt-3 flex items-center gap-1.5 text-xs text-slate-400">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                  <span>Real sessions tracked</span>
                 </div>
                 <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 to-indigo-500"></div>
               </div>
@@ -607,13 +664,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBackToSite }) => {
                   </div>
                 </div>
                 <div className="text-3xl font-extrabold text-white tracking-tight">
-                  {displayUnique.toLocaleString()}
+                  {realTimeMetrics.unique.toLocaleString()}
                 </div>
-                <div className="mt-3 flex items-center gap-2 text-xs">
-                  <span className="text-emerald-400 font-bold flex items-center">
-                    <TrendingUp className="w-3 h-3 mr-0.5" /> +19.2%
-                  </span>
-                  <span className="text-slate-500">high organic reach</span>
+                <div className="mt-3 flex items-center gap-1.5 text-xs text-slate-400">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
+                  <span>Unique devices</span>
                 </div>
                 <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-500 to-teal-500"></div>
               </div>
@@ -627,13 +682,13 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBackToSite }) => {
                   </div>
                 </div>
                 <div className="text-3xl font-extrabold text-white tracking-tight">
-                  {displayClicks.toLocaleString()}
+                  {realTimeMetrics.clicks.toLocaleString()}
                 </div>
                 <div className="mt-3 flex items-center gap-2 text-xs">
                   <span className="text-orange-400 font-bold">
-                    {conversionRate}% CTR
+                    {realTimeMetrics.ctr}% CTR
                   </span>
-                  <span className="text-slate-500">primary lead channel</span>
+                  <span className="text-slate-500">real click-through rate</span>
                 </div>
                 <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-[#EA580C] to-[#F97316]"></div>
               </div>
@@ -647,19 +702,16 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBackToSite }) => {
                   </div>
                 </div>
                 <div className="text-3xl font-extrabold text-white tracking-tight">
-                  {displayConversions.toLocaleString()}
+                  {realTimeMetrics.conversions.toLocaleString()}
                 </div>
-                <div className="mt-3 flex items-center gap-2 text-xs">
-                  <span className="text-purple-400 font-bold">
-                    Direct inquiries
-                  </span>
-                  <span className="text-slate-500">custom quote leads</span>
+                <div className="mt-3 flex items-center gap-1.5 text-xs text-slate-400">
+                  <span>Enquiries submitted</span>
                 </div>
                 <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-purple-500 to-pink-500"></div>
               </div>
             </div>
 
-            {/* WhatsApp Clicks Breakdown by Source & Product Inquiries */}
+            {/* WhatsApp Clicks Breakdown & Product Inquiries */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               
               {/* WhatsApp Clicks by Source */}
@@ -667,72 +719,82 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBackToSite }) => {
                 <div className="flex items-center justify-between mb-5">
                   <div>
                     <h3 className="font-extrabold text-white text-base">WhatsApp Clicks by Touchpoint</h3>
-                    <p className="text-xs text-slate-400 mt-0.5">Which buttons and widgets drive WhatsApp chats</p>
+                    <p className="text-xs text-slate-400 mt-0.5">Real recorded button clicks across the site</p>
                   </div>
                   <span className="text-xs font-bold text-orange-400 bg-orange-500/10 px-2.5 py-1 rounded-md border border-orange-500/20">
-                    {displayClicks} Total
+                    {realTimeMetrics.clicks} Total
                   </span>
                 </div>
 
-                <div className="space-y-4">
-                  {Object.entries(analytics.clicksBySource || {}).map(([source, count]) => {
-                    const adjCount = Math.round(count * timeMultiplier);
-                    const pct = displayClicks > 0 ? Math.round((adjCount / displayClicks) * 100) : 0;
-                    return (
-                      <div key={source} className="space-y-1.5">
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="font-semibold text-slate-300">{source}</span>
-                          <span className="font-bold text-white">
-                            {adjCount} <span className="text-slate-400 font-normal">({pct}%)</span>
-                          </span>
+                {Object.keys(realTimeMetrics.sourceCounts).length === 0 ? (
+                  <div className="p-8 text-center text-xs text-slate-400 rounded-xl bg-slate-950/60 border border-slate-800/80">
+                    No WhatsApp clicks recorded yet. When visitors click any WhatsApp CTA, the real touchpoint will appear here instantly.
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {Object.entries(realTimeMetrics.sourceCounts).map(([source, count]) => {
+                      const pct = realTimeMetrics.clicks > 0 ? Math.round((count / realTimeMetrics.clicks) * 100) : 0;
+                      return (
+                        <div key={source} className="space-y-1.5">
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="font-semibold text-slate-300">{source}</span>
+                            <span className="font-bold text-white">
+                              {count} <span className="text-slate-400 font-normal">({pct}%)</span>
+                            </span>
+                          </div>
+                          <div className="w-full bg-slate-950 rounded-full h-2 overflow-hidden border border-slate-800">
+                            <div 
+                              className="bg-gradient-to-r from-[#EA580C] to-[#F97316] h-full rounded-full transition-all duration-500"
+                              style={{ width: `${Math.min(pct, 100)}%` }}
+                            ></div>
+                          </div>
                         </div>
-                        <div className="w-full bg-slate-950 rounded-full h-2 overflow-hidden border border-slate-800">
-                          <div 
-                            className="bg-gradient-to-r from-[#EA580C] to-[#F97316] h-full rounded-full transition-all duration-500"
-                            style={{ width: `${Math.min(pct, 100)}%` }}
-                          ></div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
 
               {/* Top Service Inquiries */}
               <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
                 <div className="flex items-center justify-between mb-5">
                   <div>
-                    <h3 className="font-extrabold text-white text-base">Top Performing Services</h3>
-                    <p className="text-xs text-slate-400 mt-0.5">Services receiving the most WhatsApp quotes & interest</p>
+                    <h3 className="font-extrabold text-white text-base">Service Inquiries & Clicks</h3>
+                    <p className="text-xs text-slate-400 mt-0.5">Real packages selected or enquired by clients</p>
                   </div>
                   <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-md border border-emerald-500/20">
-                    High Demand
+                    Live Demand
                   </span>
                 </div>
 
-                <div className="space-y-3.5">
-                  {Object.entries(analytics.clicksByService || {})
-                    .sort(([, a], [, b]) => b - a)
-                    .map(([name, count], idx) => {
-                      const adjCount = Math.round(count * timeMultiplier);
-                      return (
-                        <div key={name} className="flex items-center justify-between p-3 rounded-xl bg-slate-950/60 border border-slate-800/80 hover:border-slate-700 transition-colors">
-                          <div className="flex items-center gap-3">
-                            <span className="w-5 text-center text-xs font-black text-slate-400">#{idx + 1}</span>
-                            <div>
-                              <div className="text-xs font-bold text-slate-200">{name}</div>
-                              <div className="text-[10px] text-slate-400">Launch package inquiries</div>
+                {Object.keys(realTimeMetrics.serviceCounts).length === 0 ? (
+                  <div className="p-8 text-center text-xs text-slate-400 rounded-xl bg-slate-950/60 border border-slate-800/80">
+                    No specific package clicks recorded yet. Real enquiries from service cards and the form will rank here.
+                  </div>
+                ) : (
+                  <div className="space-y-3.5">
+                    {Object.entries(realTimeMetrics.serviceCounts)
+                      .sort(([, a], [, b]) => b - a)
+                      .map(([name, count], idx) => {
+                        return (
+                          <div key={name} className="flex items-center justify-between p-3 rounded-xl bg-slate-950/60 border border-slate-800/80 hover:border-slate-700 transition-colors">
+                            <div className="flex items-center gap-3">
+                              <span className="w-5 text-center text-xs font-black text-slate-400">#{idx + 1}</span>
+                              <div>
+                                <div className="text-xs font-bold text-slate-200">{name}</div>
+                                <div className="text-[10px] text-slate-400">Live package interest</div>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <span className="text-xs font-extrabold text-orange-400 bg-orange-500/10 px-2 py-0.5 rounded">
+                                {count} clicks
+                              </span>
                             </div>
                           </div>
-                          <div className="text-right">
-                            <span className="text-xs font-extrabold text-orange-400 bg-orange-500/10 px-2 py-0.5 rounded">
-                              {adjCount} clicks
-                            </span>
-                          </div>
-                        </div>
-                      );
-                    })}
-                </div>
+                        );
+                      })}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -747,64 +809,68 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBackToSite }) => {
                       <Globe className="w-5 h-5 text-blue-400" />
                       <span>Countries Performing Clicks & Visits</span>
                     </h3>
-                    <p className="text-xs text-slate-400 mt-0.5">Geographic distribution of visitors & WhatsApp leads</p>
+                    <p className="text-xs text-slate-400 mt-0.5">Real visitor geolocation telemetry</p>
                   </div>
                   <span className="text-xs font-bold text-blue-400 bg-blue-500/10 px-2.5 py-1 rounded-md border border-blue-500/20">
-                    {countryList.length} Countries
+                    {realTimeMetrics.countryList.length} Active Countries
                   </span>
                 </div>
 
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs">
-                    <thead>
-                      <tr className="border-b border-slate-800 text-slate-400 font-bold uppercase tracking-wider">
-                        <th className="pb-3 pl-1">Country</th>
-                        <th className="pb-3 text-center">Visits</th>
-                        <th className="pb-3 text-center">WhatsApp Clicks</th>
-                        <th className="pb-3 text-center">Click Rate</th>
-                        <th className="pb-3 text-right pr-1">Traffic Share</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-800/60 font-medium">
-                      {countryList.map((c) => {
-                        const adjVisits = Math.round(c.visits * timeMultiplier);
-                        const adjClicks = Math.round(c.clicks * timeMultiplier);
-                        const ctr = adjVisits > 0 ? ((adjClicks / adjVisits) * 100).toFixed(1) : '0.0';
-                        const share = displayVisits > 0 ? ((adjVisits / displayVisits) * 100).toFixed(1) : '0';
+                {realTimeMetrics.countryList.length === 0 ? (
+                  <div className="p-8 text-center text-xs text-slate-400 rounded-xl bg-slate-950/60 border border-slate-800/80">
+                    No country data yet. Will populate as real visitors browse and interact with the website.
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs">
+                      <thead>
+                        <tr className="border-b border-slate-800 text-slate-400 font-bold uppercase tracking-wider">
+                          <th className="pb-3 pl-1">Country</th>
+                          <th className="pb-3 text-center">Visits</th>
+                          <th className="pb-3 text-center">WhatsApp Clicks</th>
+                          <th className="pb-3 text-center">Click Rate</th>
+                          <th className="pb-3 text-right pr-1">Traffic Share</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-800/60 font-medium">
+                        {realTimeMetrics.countryList.map((c) => {
+                          const ctr = c.visits > 0 ? ((c.clicks / c.visits) * 100).toFixed(1) : '0.0';
+                          const share = realTimeMetrics.visits > 0 ? ((c.visits / realTimeMetrics.visits) * 100).toFixed(1) : '0';
 
-                        return (
-                          <tr key={c.code} className="hover:bg-slate-800/40 transition-colors">
-                            <td className="py-3 pl-1 flex items-center gap-2.5">
-                              <span className="text-lg">{c.flag}</span>
-                              <div>
-                                <div className="font-bold text-white">{c.name}</div>
-                                <div className="text-[10px] text-slate-400 font-mono">{c.code}</div>
-                              </div>
-                            </td>
-                            <td className="py-3 text-center text-slate-300 font-semibold">{adjVisits}</td>
-                            <td className="py-3 text-center">
-                              <span className="px-2 py-0.5 rounded bg-orange-500/10 text-orange-400 font-bold border border-orange-500/20">
-                                {adjClicks}
-                              </span>
-                            </td>
-                            <td className="py-3 text-center text-emerald-400 font-bold">{ctr}%</td>
-                            <td className="py-3 text-right pr-1">
-                              <div className="flex items-center justify-end gap-2">
-                                <span className="text-slate-400 text-[11px]">{share}%</span>
-                                <div className="w-16 bg-slate-950 rounded-full h-1.5 overflow-hidden">
-                                  <div 
-                                    className="bg-blue-500 h-full rounded-full" 
-                                    style={{ width: `${Math.min(parseFloat(share), 100)}%` }}
-                                  ></div>
+                          return (
+                            <tr key={c.code} className="hover:bg-slate-800/40 transition-colors">
+                              <td className="py-3 pl-1 flex items-center gap-2.5">
+                                <span className="text-lg">{c.flag}</span>
+                                <div>
+                                  <div className="font-bold text-white">{c.name}</div>
+                                  <div className="text-[10px] text-slate-400 font-mono">{c.code}</div>
                                 </div>
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
+                              </td>
+                              <td className="py-3 text-center text-slate-300 font-semibold">{c.visits}</td>
+                              <td className="py-3 text-center">
+                                <span className="px-2 py-0.5 rounded bg-orange-500/10 text-orange-400 font-bold border border-orange-500/20">
+                                  {c.clicks}
+                                </span>
+                              </td>
+                              <td className="py-3 text-center text-emerald-400 font-bold">{ctr}%</td>
+                              <td className="py-3 text-right pr-1">
+                                <div className="flex items-center justify-end gap-2">
+                                  <span className="text-slate-400 text-[11px]">{share}%</span>
+                                  <div className="w-16 bg-slate-950 rounded-full h-1.5 overflow-hidden">
+                                    <div 
+                                      className="bg-blue-500 h-full rounded-full" 
+                                      style={{ width: `${Math.min(parseFloat(share), 100)}%` }}
+                                    ></div>
+                                  </div>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
 
               {/* Device Breakdown */}
@@ -812,17 +878,17 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBackToSite }) => {
                 <div>
                   <div className="flex items-center justify-between mb-5">
                     <div>
-                      <h3 className="font-extrabold text-white text-base">Device Breakdown</h3>
-                      <p className="text-xs text-slate-400 mt-0.5">Visitor platform analytics</p>
+                      <h3 className="font-extrabold text-white text-base">Real Device Breakdown</h3>
+                      <p className="text-xs text-slate-400 mt-0.5">Actual platform telemetry</p>
                     </div>
                   </div>
 
                   {(() => {
-                    const { mobile, desktop, tablet } = analytics.deviceBreakdown || { mobile: 70, desktop: 26, tablet: 4 };
-                    const totalDev = (mobile + desktop + tablet) || 1;
-                    const mobPct = Math.round((mobile / totalDev) * 100);
-                    const deskPct = Math.round((desktop / totalDev) * 100);
-                    const tabPct = Math.round((tablet / totalDev) * 100);
+                    const { mobile, desktop, tablet } = realTimeMetrics.devices;
+                    const totalDev = (mobile + desktop + tablet) || 0;
+                    const mobPct = totalDev > 0 ? Math.round((mobile / totalDev) * 100) : 0;
+                    const deskPct = totalDev > 0 ? Math.round((desktop / totalDev) * 100) : 0;
+                    const tabPct = totalDev > 0 ? Math.round((tablet / totalDev) * 100) : 0;
 
                     return (
                       <div className="space-y-4">
@@ -833,12 +899,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBackToSite }) => {
                               <Smartphone className="w-4 h-4 text-orange-400" />
                               <span>Mobile Devices</span>
                             </div>
-                            <span className="text-orange-400 font-bold">{mobPct}%</span>
+                            <span className="text-orange-400 font-bold">{mobile} ({mobPct}%)</span>
                           </div>
                           <div className="w-full bg-slate-900 rounded-full h-2 overflow-hidden">
                             <div className="bg-orange-500 h-full rounded-full" style={{ width: `${mobPct}%` }}></div>
                           </div>
-                          <div className="text-[10px] text-slate-400 mt-1">High conversion via WhatsApp integration</div>
                         </div>
 
                         {/* Desktop */}
@@ -848,12 +913,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBackToSite }) => {
                               <Monitor className="w-4 h-4 text-blue-400" />
                               <span>Desktop Browsers</span>
                             </div>
-                            <span className="text-blue-400 font-bold">{deskPct}%</span>
+                            <span className="text-blue-400 font-bold">{desktop} ({deskPct}%)</span>
                           </div>
                           <div className="w-full bg-slate-900 rounded-full h-2 overflow-hidden">
                             <div className="bg-blue-500 h-full rounded-full" style={{ width: `${deskPct}%` }}></div>
                           </div>
-                          <div className="text-[10px] text-slate-400 mt-1">B2B client project evaluations</div>
                         </div>
 
                         {/* Tablet */}
@@ -863,12 +927,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBackToSite }) => {
                               <Tablet className="w-4 h-4 text-purple-400" />
                               <span>Tablet & iPads</span>
                             </div>
-                            <span className="text-purple-400 font-bold">{tabPct}%</span>
+                            <span className="text-purple-400 font-bold">{tablet} ({tabPct}%)</span>
                           </div>
                           <div className="w-full bg-slate-900 rounded-full h-2 overflow-hidden">
                             <div className="bg-purple-500 h-full rounded-full" style={{ width: `${tabPct}%` }}></div>
                           </div>
-                          <div className="text-[10px] text-slate-400 mt-1">Responsive layout inspection</div>
                         </div>
                       </div>
                     );
@@ -876,8 +939,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBackToSite }) => {
                 </div>
 
                 <div className="pt-4 border-t border-slate-800 text-[11px] text-slate-400 flex items-center justify-between">
-                  <span>Tracking Engine: Active</span>
-                  <span className="text-emerald-400 font-semibold">100% Mobile Ready</span>
+                  <span>Tracking Engine: Pure Live</span>
+                  <span className="text-emerald-400 font-semibold">Real-Time Sync</span>
                 </div>
               </div>
             </div>
@@ -888,9 +951,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBackToSite }) => {
                 <div>
                   <h3 className="font-extrabold text-white text-base flex items-center gap-2">
                     <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span>
-                    <span>Real-Time Visitor Event Feed</span>
+                    <span>Live Visitor Event Feed</span>
                   </h3>
-                  <p className="text-xs text-slate-400 mt-0.5">Live stream of WhatsApp clicks, page visits, and form requests</p>
+                  <p className="text-xs text-slate-400 mt-0.5">Real recorded events stream</p>
                 </div>
 
                 {/* Filter */}
@@ -901,7 +964,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBackToSite }) => {
                     onChange={(e: any) => setEventFilter(e.target.value)}
                     className="bg-slate-950 border border-slate-800 text-slate-300 rounded-lg px-2.5 py-1 text-xs focus:ring-1 focus:ring-orange-500"
                   >
-                    <option value="all">All Events</option>
+                    <option value="all">All Events ({filteredEvents.length})</option>
                     <option value="whatsapp">WhatsApp Clicks Only</option>
                     <option value="conversion">Conversions Only</option>
                     <option value="visit">Visits Only</option>
@@ -911,8 +974,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBackToSite }) => {
 
               <div className="divide-y divide-slate-800/60 max-h-80 overflow-y-auto pr-1">
                 {filteredEvents.length === 0 ? (
-                  <div className="py-8 text-center text-xs text-slate-400">
-                    No events matching filter. Click "Test Click" above to trigger a live event!
+                  <div className="py-12 text-center text-xs text-slate-400">
+                    <Activity className="w-8 h-8 text-slate-600 mx-auto mb-2 animate-pulse" />
+                    <span>No events recorded yet. Browse the site in another tab or click any WhatsApp button to see it appear live!</span>
                   </div>
                 ) : (
                   filteredEvents.map((evt) => {
@@ -1232,16 +1296,16 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBackToSite }) => {
                 </div>
 
                 <div className="p-4 rounded-xl bg-slate-950 border border-slate-800">
-                  <div className="font-bold text-sm text-white mb-1">Reset Analytics Stats</div>
+                  <div className="font-bold text-sm text-white mb-1">Reset Analytics Counters</div>
                   <p className="text-xs text-slate-400 mb-4">
-                    Clear event counters and reset analytics data to original baseline values.
+                    Clear all event logs and reset visitor & click telemetry back to 0.
                   </p>
                   <button
                     onClick={handleResetAnalytics}
                     className="w-full py-2.5 px-3 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 text-xs font-bold border border-rose-500/20 transition-colors flex items-center justify-center gap-2"
                   >
                     <RefreshCw className="w-3.5 h-3.5" />
-                    <span>Reset Analytics Counters</span>
+                    <span>Reset Analytics to 0</span>
                   </button>
                 </div>
               </div>
