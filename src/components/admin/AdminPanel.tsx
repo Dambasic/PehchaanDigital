@@ -107,7 +107,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBackToSite }) => {
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     const storedPin = localStorage.getItem('pehchaan_admin_pin') || 'pehchaan2026';
-    if (pinInput.trim() === storedPin || pinInput.trim() === 'pehchaan2026' || pinInput.trim() === 'admin2026') {
+    if (pinInput.trim() === storedPin || pinInput.trim() === 'pehchaan2026') {
       setIsAuthenticated(true);
       setPinError('');
       if (rememberMe) {
@@ -115,7 +115,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBackToSite }) => {
       }
       showToast('Logged in successfully!');
     } else {
-      setPinError('Invalid passcode. Default is "pehchaan2026"');
+      setPinError('Invalid admin passcode. Access denied.');
     }
   };
 
@@ -370,13 +370,15 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBackToSite }) => {
             <p className="text-sm font-medium text-slate-400 mt-1">Admin Portal & Real-Time Analytics</p>
           </div>
 
-          <form onSubmit={handleLogin} className="space-y-5">
+          <form onSubmit={handleLogin} className="space-y-5" autoComplete="off">
             <div>
               <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-2">
                 Admin Passcode / PIN
               </label>
               <input
                 type="password"
+                name="admin-passcode"
+                autoComplete="new-password"
                 value={pinInput}
                 onChange={(e) => { setPinInput(e.target.value); setPinError(''); }}
                 placeholder="Enter admin passcode"
@@ -412,22 +414,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBackToSite }) => {
             </button>
           </form>
 
-          {/* Quick Passcode Assist */}
-          <div className="mt-6 pt-5 border-t border-slate-700/60 text-center">
-            <div className="inline-block p-2 rounded-lg bg-slate-950/60 border border-slate-700/50 text-xs text-slate-400">
-              <span className="text-slate-300 font-medium">Default Passcode:</span>{' '}
-              <button
-                type="button"
-                onClick={() => { setPinInput('pehchaan2026'); setPinError(''); }}
-                className="font-mono text-orange-400 font-bold hover:underline"
-              >
-                pehchaan2026
-              </button>
-              <span className="text-[11px] block text-slate-400 mt-0.5">(Click passcode to auto-fill)</span>
-            </div>
-          </div>
-
-          <div className="mt-4 text-center">
+          <div className="mt-6 text-center">
             <button
               onClick={onBackToSite}
               className="text-xs text-slate-400 hover:text-white transition-colors flex items-center justify-center gap-1 mx-auto"
@@ -1230,13 +1217,13 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBackToSite }) => {
               >
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1.5">
-                    Current Active Passcode
+                    Current Passcode Status
                   </label>
                   <input
-                    type="text"
+                    type="password"
                     disabled
-                    value={currentAdminPin}
-                    className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-slate-400 font-mono text-sm cursor-not-allowed"
+                    value={currentAdminPin ? '••••••••••••' : '••••••••••••'}
+                    className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-slate-400 font-mono text-sm cursor-not-allowed tracking-widest"
                   />
                 </div>
 

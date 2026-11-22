@@ -53,7 +53,7 @@ The website includes a built-in, secure Admin Portal with real-time product pric
 
 ### Accessing Admin:
 - Navigate to `/#admin` in the URL (e.g. `your-domain.com/#admin`) or click **"Admin Portal"** in the footer / navbar.
-- **Default Admin Passcode:** `pehchaan2026` (can be changed anytime in Settings).
+- Admin access is protected by an admin passcode (configurable in Settings).
 
 ### Features:
 1. **Products & Services Manager**:
